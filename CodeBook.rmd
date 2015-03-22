@@ -1,0 +1,71 @@
+---
+title: "Getting and Cleaning Data Project 2 CodeBook"
+author: "NirmaMary"
+date: "Sunday, March 22, 2015"
+output: html_document
+---
+
+This is an R Markdown document. 
+This includes the R code that does the following.This file displays the Tiday Data set properties, field names and types (str(tidyData) as weel as sample Data (head(tidayData,5)).
+
+    Merges the training and the test sets to create one data set.
+    Extracts only the measurements on the mean and standard deviation for each measurement. 
+    Uses descriptive activity names to name the activities in the data set
+    Appropriately labels the data set with descriptive variable names. 
+
+    From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject.
+
+```{r}
+setwd("C:/DataScience/Get_CleanData")
+
+if(!file.exists("./data")) {
+  dir.create("./data")
+}
+
+fileURL <- "http://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip"
+tempFile <- tempfile()
+download.file(fileURL, tempFile)
+unzip(tempFile, exdir = "./data")
+
+testSubject <- read.table("./data/UCI HAR Dataset/test/subject_test.txt",
+                          header = F, stringsAsFactors = F, fill = T)
+testX <- read.table("./data/UCI HAR Dataset/test/X_test.txt",
+                    header = F, stringsAsFactors = F, fill = T)
+testY <- read.table("./data/UCI HAR Dataset/test/y_test.txt",
+                    header = F, stringsAsFactors = F, fill = T)
+trainSubject <- read.table("./data/UCI HAR Dataset/train/subject_train.txt",
+                           header = F, stringsAsFactors = F, fill = T)
+trainX <- read.table("./data/UCI HAR Dataset/train/X_train.txt",
+                     header = F, stringsAsFactors = F, fill = T)
+trainY <- read.table("./data/UCI HAR Dataset/train/y_train.txt",
+                     header = F, stringsAsFactors = F, fill = T)
+
+mergedData <- cbind(rbind(testSubject, trainSubject),
+                    rbind(testY, trainY),
+                    rbind(testX, trainX))
+
+features <- read.table("./data/UCI HAR Dataset/features.txt",
+                       header = F, stringsAsFactors = F, fill = T)
+
+colnames(mergedData)[1:2] <- c("Subject", "Activity")
+
+colnames(mergedData)[3:563] <- features[, 2]
+
+mergedData <- mergedData[, grepl("mean()|std()|Activity|Subject", colnames(mergedData)) & !grepl("meanFreq", colnames(mergedData))]
+
+activities <- read.table("./data/UCI HAR Dataset/activity_labels.txt",
+                         header = F, stringsAsFactors = F, fill = T)
+
+mergedData$Activity <- factor(mergedData$Activity, levels = activities[, 1], labels = activities[, 2])
+
+library(plyr)
+tidyData <- ddply(mergedData,
+                  .(Subject, Activity),
+                  .fun=function(x) { colMeans(x[ ,-c(1:2)]) })
+
+write.table(tidyData, "./data/tidydata.txt", row.names = FALSE)
+str(tidyData)
+head (tidyData, 5)
+
+```
+
